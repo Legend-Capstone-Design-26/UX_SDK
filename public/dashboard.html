@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AB Dashboard</title>
+  <link rel="stylesheet" href="/dashboard.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <div class="title">AB Dashboard</div>
+        <div class="subtitle">실험 관리 + A/B Metrics + UX Analysis</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <a class="btn" href="/editor">Visual Editor</a>
+      <button class="btn" id="refreshBtn">새로고침</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <div class="cardHead">
+        <h2>Experiments</h2>
+        <div class="muted">site_id: <span class="mono">ab-sample</span></div>
+      </div>
+
+      <div class="tableWrap">
+        <table class="table" id="expTable">
+          <thead>
+            <tr>
+              <th>Key</th>
+              <th>Status</th>
+              <th>URL Prefix</th>
+              <th>Version</th>
+              <th>Updated</th>
+              <th style="width:280px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="expTbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" id="metricsCard" style="display:none;">
+      <div class="cardHead">
+        <h2>Metrics</h2>
+        <div class="muted">선택된 실험: <span class="mono" id="metricKey">—</span></div>
+      </div>
+
+      <div class="grid">
+        <div class="miniCard">
+          <div class="helpAnchor">
+            <div class="miniTitle helpTitle">CVR (Conversions / Sessions) <button class="helpBtn" type="button" aria-expanded="false" aria-label="CVR 설명 보기" data-help-target="help-metric-cvr">?</button></div>
+            <div class="helpPopover" id="help-metric-cvr" role="tooltip">
+              세션 중 얼마나 많은 세션이 목표 전환으로 이어졌는지 보여주는 지표입니다. 값이 높을수록 실험군이 전환에 더 유리하다는 뜻입니다.
+            </div>
+          </div>
+          <div class="miniRow"><div class="pill">A</div><div class="big mono" id="cvrA">—</div></div>
+          <div class="miniRow"><div class="pill b">B</div><div class="big mono" id="cvrB">—</div></div>
+        </div>
+
+        <div class="miniCard">
+          <div class="helpAnchor">
+            <div class="miniTitle helpTitle">CTR (Clicks / PageViews) <button class="helpBtn" type="button" aria-expanded="false" aria-label="CTR 설명 보기" data-help-target="help-metric-ctr">?</button></div>
+            <div class="helpPopover" id="help-metric-ctr" role="tooltip">
+              페이지뷰 대비 클릭 비율입니다. 사용자가 화면을 본 뒤 실제로 상호작용했는지, CTA나 정보 구조가 행동을 유도했는지 보는 데 유용합니다.
+            </div>
+          </div>
+          <div class="miniRow"><div class="pill">A</div><div class="big mono" id="ctrA">—</div></div>
+          <div class="miniRow"><div class="pill b">B</div><div class="big mono" id="ctrB">—</div></div>
+        </div>
+
+        <div class="miniCard">
+          <div class="helpAnchor">
+            <div class="miniTitle helpTitle">Bounce Rate <button class="helpBtn" type="button" aria-expanded="false" aria-label="Bounce Rate 설명 보기" data-help-target="help-metric-bounce">?</button></div>
+            <div class="helpPopover" id="help-metric-bounce" role="tooltip">
+              첫 화면만 보고 추가 상호작용 없이 이탈한 세션 비율입니다. 값이 높으면 랜딩 경험이나 첫 행동 유도가 약할 가능성이 큽니다.
+            </div>
+          </div>
+          <div class="miniRow"><div class="pill">A</div><div class="big mono" id="brA">—</div></div>
+          <div class="miniRow"><div class="pill b">B</div><div class="big mono" id="brB">—</div></div>
+        </div>
+
+        <div class="miniCard">
+          <div class="helpAnchor">
+            <div class="miniTitle helpTitle">Counts <button class="helpBtn" type="button" aria-expanded="false" aria-label="Counts 설명 보기" data-help-target="help-metric-counts">?</button></div>
+            <div class="helpPopover" id="help-metric-counts" role="tooltip">
+              실험군별 users, sessions, page views, clicks, conversions의 절대값입니다. 비율 지표가 왜 그렇게 나왔는지 모수를 함께 확인할 수 있습니다.
+            </div>
+          </div>
+          <div class="kv mono" id="countsBox">—</div>
+        </div>
+      </div>
+
+      <div class="split">
+        <div class="miniCard">
+          <div class="miniTitle">Top Clicked Elements (A)</div>
+          <div class="mono list" id="topA">—</div>
+        </div>
+        <div class="miniCard">
+          <div class="miniTitle">Top Clicked Elements (B)</div>
+          <div class="mono list" id="topB">—</div>
+        </div>
+      </div>
+
+      <div class="hint">
+        * MVP 집계: <span class="mono">data/events.jsonl</span> 전체를 읽어서 계산합니다. (데이터가 커지면 ClickHouse/BigQuery로 이동)
+      </div>
+    </section>
+
+    <section class="card" id="uxSummaryCard">
+      <div class="cardHead">
+        <h2>UX Analysis Overview</h2>
+        <div class="muted">세션 라벨 분포와 인사이트를 한 번에 확인</div>
+      </div>
+
+      <div class="grid analysisGrid">
+        <div class="miniCard">
+          <div class="helpAnchor">
+            <div class="miniTitle helpTitle">Total Sessions <button class="helpBtn" type="button" aria-expanded="false" aria-label="Total Sessions 설명 보기" data-help-target="help-total-sessions">?</button></div>
+            <div class="helpPopover" id="help-total-sessions" role="tooltip">
+              이번 조건으로 집계된 전체 세션 수입니다. 라벨 분포, 대표 유형, 인사이트 우선순위는 이 세션 집합을 기준으로 계산됩니다.
+            </div>
+          </div>
+          <div class="big mono" id="uxTotalSessions">—</div>
+        </div>
+        <div class="miniCard">
+          <div class="helpAnchor">
+            <div class="miniTitle helpTitle">Primary Label <button class="helpBtn" type="button" aria-expanded="false" aria-label="Primary Label 설명 보기" data-help-target="help-primary-label">?</button></div>
+            <div class="helpPopover" id="help-primary-label" role="tooltip">
+              가장 많은 세션에 붙은 사용자 유형입니다. 지금 트래픽에서 어떤 행동 패턴이 가장 지배적인지 빠르게 보여줍니다.
+            </div>
+          </div>
+          <div class="big" id="uxTopLabel">—</div>
+        </div>
+        <div class="miniCard">
+          <div class="helpAnchor">
+            <div class="miniTitle helpTitle">High Priority Insights <button class="helpBtn" type="button" aria-expanded="false" aria-label="High Priority Insights 설명 보기" data-help-target="help-high-priority">?</button></div>
+            <div class="helpPopover" id="help-high-priority" role="tooltip">
+              현재 인사이트 중 우선순위가 `high`로 분류된 개수입니다. 비중이 크거나 마찰 강도가 높은 문제를 먼저 보게 해줍니다.
+            </div>
+          </div>
+          <div class="big mono" id="uxHighPriorityCount">—</div>
+        </div>
+        <div class="miniCard">
+          <div class="helpAnchor">
+            <div class="miniTitle helpTitle">Insight Provider <button class="helpBtn" type="button" aria-expanded="false" aria-label="Insight Provider 설명 보기" data-help-target="help-provider">?</button></div>
+            <div class="helpPopover" id="help-provider" role="tooltip">
+              인사이트를 만든 엔진입니다. `fallback`이면 규칙 기반 템플릿, `openai`면 실제 LLM 결과를 뜻합니다.
+            </div>
+          </div>
+          <div class="big mono" id="uxInsightProvider">—</div>
+        </div>
+      </div>
+
+      <div class="split analysisSplit">
+        <div class="miniCard">
+          <div class="helpAnchor">
+            <div class="miniTitle helpTitle">Label Distribution <button class="helpBtn" type="button" aria-expanded="false" aria-label="Label Distribution 설명 보기" data-help-target="help-label-distribution">?</button></div>
+            <div class="helpPopover" id="help-label-distribution" role="tooltip">
+              사용자 유형별 세션 수와 비중입니다. 어떤 유형이 많아졌는지, 테스트 트래픽이 어디에 집중되는지 확인할 수 있습니다.
+            </div>
+          </div>
+          <div id="labelBars" class="barList muted">loading…</div>
+        </div>
+        <div class="miniCard">
+          <div class="helpAnchor">
+            <div class="miniTitle helpTitle">Top Opportunities <button class="helpBtn" type="button" aria-expanded="false" aria-label="Top Opportunities 설명 보기" data-help-target="help-top-opportunities">?</button></div>
+            <div class="helpPopover" id="help-top-opportunities" role="tooltip">
+              우선순위가 높거나 영향이 큰 인사이트를 짧게 요약한 영역입니다. 지금 바로 봐야 할 문제 후보를 빠르게 훑는 용도입니다.
+            </div>
+          </div>
+          <div id="opportunityList" class="opportunityList muted">loading…</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="labelsCard">
+      <div class="cardHead">
+        <h2>Label Summary</h2>
+        <div class="muted">유형별 세션 수, 비중, 평균 행동 지표</div>
+      </div>
+
+      <div class="tableWrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Label</th>
+              <th>Sessions</th>
+              <th>Share</th>
+              <th>Avg Duration</th>
+              <th>Avg Depth</th>
+              <th>Checkout Complete Rate</th>
+            </tr>
+          </thead>
+          <tbody id="labelSummaryBody">
+            <tr><td colspan="6" class="muted">loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" id="sessionsCard">
+      <div class="cardHead">
+        <h2>Recent Sessions</h2>
+        <div class="muted">최근 세션의 라벨과 퍼널 진행 상태</div>
+      </div>
+
+      <div class="tableWrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Session</th>
+              <th>Label</th>
+              <th>Confidence</th>
+              <th>Duration</th>
+              <th>Page Views</th>
+              <th>Clicks</th>
+              <th>Depth</th>
+              <th>Max Step</th>
+              <th>Checkout</th>
+            </tr>
+          </thead>
+          <tbody id="sessionsBody">
+            <tr><td colspan="9" class="muted">loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" id="insightsCard">
+      <div class="cardHead">
+        <h2>UX Insights</h2>
+        <div class="muted">라벨별 원인 가설, 검증 방법, 추천 실험</div>
+      </div>
+
+      <div id="insightsList" class="insightsGrid">
+        <div class="miniCard muted">loading…</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="cardHead">
+        <h2>Quick Test</h2>
+        <div class="muted">SDK가 실제 적용되는지 바로 확인</div>
+      </div>
+      <div class="btnRow">
+        <a class="btn primary" href="/" target="_blank" rel="noopener">Open Main</a>
+        <a class="btn primary" href="/detail?product=neo-coffee" target="_blank" rel="noopener">Open Detail</a>
+        <a class="btn primary" href="/checkout?product=neo-coffee" target="_blank" rel="noopener">Open Checkout</a>
+      </div>
+      <div class="muted" style="margin-top:10px;">
+        방문할 때마다 유저가 A/B로 고정됩니다(anon_user_id 기반). 다른 유저처럼 보려면 시크릿 창 또는 localStorage 삭제.
+      </div>
+    </section>
+  </main>
+
+  <script src="/dashboard.js"></script>
+</body>
+</html>
