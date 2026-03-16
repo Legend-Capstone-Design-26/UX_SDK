@@ -1,2 +1,8 @@
 events.json
 node_modules/
+data/events.jsonl
+load/k6-summary.json
+.env
+.env.*
+!.env.example
+*.log
