@@ -29,6 +29,8 @@
 
   const cssRow = document.getElementById("cssRow");
   const cssValue = document.getElementById("cssValue");
+  const styleRow = document.getElementById("styleRow");
+  const styleValue = document.getElementById("styleValue");
 
   const addChangeBtn = document.getElementById("addChangeBtn");
   const applyNowBtn = document.getElementById("applyNowBtn");
@@ -132,6 +134,41 @@
       : "—";
   }
 
+  function parseStyleDeclarations(input) {
+    const raw = String(input || "").trim();
+    if (!raw) {
+      return { ok: false, reason: "스타일 선언을 입력하세요." };
+    }
+
+    const styles = {};
+    const chunks = raw.split(/;|\r?\n/);
+
+    for (const chunk of chunks) {
+      const line = chunk.trim();
+      if (!line) continue;
+
+      const colonIdx = line.indexOf(":");
+      if (colonIdx <= 0) {
+        return { ok: false, reason: `잘못된 선언: ${line}` };
+      }
+
+      const property = line.slice(0, colonIdx).trim();
+      const value = line.slice(colonIdx + 1).trim();
+      if (!property || !value) {
+        return { ok: false, reason: `잘못된 선언: ${line}` };
+      }
+
+      styles[property] = value;
+    }
+
+    const entries = Object.entries(styles);
+    if (entries.length === 0) {
+      return { ok: false, reason: "스타일 선언을 입력하세요." };
+    }
+
+    return { ok: true, styles };
+  }
+
   function normalizeChangeFromUI() {
     if (!lastSelected && actionType.value !== "inject_css") {
       alert("먼저 iframe에서 요소를 클릭해 선택하세요.");
@@ -157,6 +194,12 @@
       const v = (actionValue.value || "").trim();
       if (!v) { alert("텍스트를 입력하세요."); return null; }
       return { selector, actions: [{ type: "set_text", value: v }] };
+    }
+
+    if (type === "set_style") {
+      const parsed = parseStyleDeclarations(styleValue.value);
+      if (!parsed.ok) { alert(parsed.reason); return null; }
+      return { selector, actions: [{ type: "set_style", styles: parsed.styles }] };
     }
 
     if (type === "add_class" || type === "remove_class") {
@@ -315,10 +358,12 @@
     valueRow.style.display = "none";
     attrRow.style.display = "none";
     cssRow.style.display = "none";
+    styleRow.style.display = "none";
 
     if (t === "set_text" || t === "add_class" || t === "remove_class") valueRow.style.display = "flex";
     if (t === "set_attr") attrRow.style.display = "flex";
     if (t === "inject_css") cssRow.style.display = "flex";
+    if (t === "set_style") styleRow.style.display = "flex";
     if (t === "hide" || t === "show") {/* none */}
   });
 

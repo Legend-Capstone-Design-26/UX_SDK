@@ -55,6 +55,7 @@
           <label class="formLabel">Action</label>
           <select id="actionType">
             <option value="set_text">set_text (텍스트 변경)</option>
+            <option value="set_style">set_style (스타일/크기/이동)</option>
             <option value="hide">hide (숨김)</option>
             <option value="show">show (표시)</option>
             <option value="add_class">add_class</option>
@@ -83,6 +84,16 @@
 [data-track-id="pay_btn"]{ font-size:18px; padding:14px; }'></textarea>
         </div>
 
+        <div class="formRow" id="styleRow" style="display:none; align-items:flex-start;">
+          <label class="formLabel">Style</label>
+          <textarea id="styleValue" rows="6" placeholder='예:
+width: 320px;
+height: 72px;
+transform: translate(24px, 12px);
+font-size: 18px;
+padding: 16px 24px;'></textarea>
+        </div>
+
         <div class="btnRow">
           <button id="addChangeBtn" class="btn primary">변경 추가</button>
 
@@ -98,6 +109,7 @@
         <div class="hint">
           - <b>프리뷰 적용</b>: iframe에서만 임시로 보임(저장 안 됨)<br/>
           - <b>Real 적용</b>: 서버에 저장/배포 → 실제 방문 시 SDK가 자동 A/B 실행
+          <br/>- <b>set_style</b>: width, height, transform, spacing, color 같은 CSS 선언을 selector 기준으로 적용
         </div>
       </div>
 
