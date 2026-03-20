@@ -31,15 +31,13 @@
   const copilotDraftStatus = document.getElementById("copilotDraftStatus");
   const saveDraftBtn = document.getElementById("saveDraftBtn");
   const openDraftInEditorBtn = document.getElementById("openDraftInEditorBtn");
-  const dashboardCopilotRoot = document.getElementById("analyticsCopilotRoot");
-  const dashboardCopilotToggleBtn = document.getElementById("dashboardCopilotToggleBtn");
 
   const DRAFT_STORAGE_KEY = "uxsdk.analyticsCopilotDraft";
   const state = {
     experiments: [],
     selectedExperimentKey: null,
     latestDraft: null,
-    copilot: null,
+    chatWidget: null,
   };
 
   function fmtPct(x) {
@@ -154,15 +152,9 @@
 
   function updateCopilotExperimentUI() {
     copilotExperimentKey.textContent = state.selectedExperimentKey || "아직 선택 안 됨";
-    if (state.copilot) {
-      state.copilot.setSelectedExperimentKey(state.selectedExperimentKey);
+    if (state.chatWidget) {
+      state.chatWidget.setSelectedExperimentKey(state.selectedExperimentKey);
     }
-  }
-
-  function setCopilotCollapsed(collapsed) {
-    dashboardCopilotRoot.classList.toggle("is-collapsed", collapsed);
-    dashboardCopilotToggleBtn.textContent = collapsed ? "열기" : "접기";
-    dashboardCopilotToggleBtn.setAttribute("aria-expanded", collapsed ? "false" : "true");
   }
 
   function stageDraftForEditor(draft, changes) {
@@ -199,27 +191,6 @@
     openDraftInEditorBtn.disabled = false;
     saveDraftBtn.disabled = exp.status === "draft";
     copilotDraftStatus.textContent = `${exp.status === "draft" ? "저장된 draft" : "실험"} 준비됨 - ${exp.key}`;
-  }
-
-  function initCopilot() {
-    if (!window.AnalyticsChat) return;
-    state.copilot = window.AnalyticsChat.init({
-      rootId: "analyticsCopilotRoot",
-      page: "dashboard",
-      floatingStorageKey: "dashboard-copilot",
-      getContext() {
-        return {
-          page: "dashboard",
-        };
-      },
-      onExperimentDraft(draft) {
-        stageDraftForEditor(draft, draft?.variant_b_changes || []);
-      },
-      onEditorChanges(changes, draft) {
-        stageDraftForEditor(draft, changes);
-      },
-    });
-    updateCopilotExperimentUI();
   }
 
   async function persistLatestDraft() {
@@ -527,9 +498,6 @@ events=${m.totals.events}  goals=${(m.goals||[]).join(", ")}`;
   });
 
   refreshBtn.addEventListener("click", () => render());
-  dashboardCopilotToggleBtn.addEventListener("click", () => {
-    setCopilotCollapsed(!dashboardCopilotRoot.classList.contains("is-collapsed"));
-  });
   saveDraftBtn.addEventListener("click", async () => {
     try {
       saveDraftBtn.disabled = true;
@@ -545,8 +513,25 @@ events=${m.totals.events}  goals=${(m.goals||[]).join(", ")}`;
     window.open("/editor?from=copilot", "_blank", "noopener");
   });
 
-  initCopilot();
-  setCopilotCollapsed(true);
+  if (window.AnalyticsChatWidget) {
+    state.chatWidget = window.AnalyticsChatWidget.init({
+      fabId: "chatbotFab",
+      panelId: "analyticsChatPanel",
+      closeBtnId: "chatbotCloseBtn",
+      messagesId: "chatMessages",
+      inputId: "chatInput",
+      sendBtnId: "chatSendBtn",
+      selectedExperimentId: "chatSelectedExperiment",
+      storageKey: "dashboard",
+      onExperimentDraft(draft) {
+        stageDraftForEditor(draft, draft?.variant_b_changes || []);
+      },
+      onEditorChanges(changes, draft) {
+        stageDraftForEditor(draft, changes);
+      },
+    });
+    updateCopilotExperimentUI();
+  }
 
   render().catch((e) => alert(String(e)));
 })();

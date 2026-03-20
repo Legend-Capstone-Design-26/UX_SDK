@@ -1,221 +1,143 @@
-(function (global) {
-  function clamp(value, min, max) {
-    return Math.min(Math.max(value, min), max);
-  }
-
-  function createNode(tag, className, text) {
-    const el = document.createElement(tag);
-    if (className) el.className = className;
-    if (typeof text === "string") el.textContent = text;
+(function () {
+  function createMessage(role, text) {
+    const el = document.createElement("div");
+    el.className = `chatbotMessage ${role}`;
+    el.textContent = String(text || "");
     return el;
   }
 
-  function renderMessage(listEl, role, text) {
-    const item = createNode("div", `chatMsg ${role}`);
-    item.textContent = text;
-    listEl.appendChild(item);
-    listEl.scrollTop = listEl.scrollHeight;
-  }
+  function initAnalyticsChatWidget(options) {
+    const fab = document.getElementById(options.fabId);
+    const panel = document.getElementById(options.panelId);
+    const closeBtn = document.getElementById(options.closeBtnId);
+    const messagesEl = document.getElementById(options.messagesId);
+    const inputEl = document.getElementById(options.inputId);
+    const sendBtn = document.getElementById(options.sendBtnId);
+    const selectedExperimentEl = document.getElementById(options.selectedExperimentId);
+    const quickButtons = Array.from(panel?.querySelectorAll("[data-q]") || []);
 
-  function setupFloatingWidget(root, storageKey) {
-    const card = root.closest(".floatingCopilot") || root;
-    const header = card.querySelector(".floatingCopilotHead");
-    if (!card || !header) return;
+    if (!fab || !panel || !messagesEl || !inputEl || !sendBtn) return null;
 
-    const persistKey = `uxsdk.floatingWidget.${storageKey || root.id || "copilot"}`;
-
-    function persist() {
-      const rect = card.getBoundingClientRect();
-      const payload = {
-        left: rect.left,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height,
-      };
-      try {
-        localStorage.setItem(persistKey, JSON.stringify(payload));
-      } catch {}
-    }
-
-    function applySavedRect() {
-      try {
-        const raw = localStorage.getItem(persistKey);
-        if (!raw) return;
-        const saved = JSON.parse(raw);
-        const width = Number(saved.width);
-        const height = Number(saved.height);
-        const left = Number(saved.left);
-        const top = Number(saved.top);
-        if (Number.isFinite(width)) card.style.width = `${width}px`;
-        if (Number.isFinite(height)) card.style.height = `${height}px`;
-        if (Number.isFinite(left) && Number.isFinite(top)) {
-          card.style.left = `${clamp(left, 8, Math.max(8, window.innerWidth - 160))}px`;
-          card.style.top = `${clamp(top, 8, Math.max(8, window.innerHeight - 80))}px`;
-          card.style.right = "auto";
-          card.style.bottom = "auto";
-        }
-      } catch {}
-    }
-
-    applySavedRect();
-
-    let dragState = null;
-
-    header.addEventListener("mousedown", (event) => {
-      if (event.target.closest("button, a, input, textarea, select, label")) return;
-      const rect = card.getBoundingClientRect();
-      dragState = {
-        offsetX: event.clientX - rect.left,
-        offsetY: event.clientY - rect.top,
-      };
-      card.classList.add("is-dragging");
-      event.preventDefault();
-    });
-
-    window.addEventListener("mousemove", (event) => {
-      if (!dragState) return;
-      const rect = card.getBoundingClientRect();
-      const nextLeft = clamp(event.clientX - dragState.offsetX, 8, Math.max(8, window.innerWidth - rect.width - 8));
-      const nextTop = clamp(event.clientY - dragState.offsetY, 8, Math.max(8, window.innerHeight - rect.height - 8));
-      card.style.left = `${nextLeft}px`;
-      card.style.top = `${nextTop}px`;
-      card.style.right = "auto";
-      card.style.bottom = "auto";
-    });
-
-    window.addEventListener("mouseup", () => {
-      if (!dragState) return;
-      dragState = null;
-      card.classList.remove("is-dragging");
-      persist();
-    });
-
-    if (typeof ResizeObserver === "function") {
-      const resizeObserver = new ResizeObserver(() => persist());
-      resizeObserver.observe(card);
-    }
-
-    window.addEventListener("resize", () => {
-      const rect = card.getBoundingClientRect();
-      const nextLeft = clamp(rect.left, 8, Math.max(8, window.innerWidth - rect.width - 8));
-      const nextTop = clamp(rect.top, 8, Math.max(8, window.innerHeight - rect.height - 8));
-      card.style.left = `${nextLeft}px`;
-      card.style.top = `${nextTop}px`;
-      card.style.right = "auto";
-      card.style.bottom = "auto";
-      persist();
-    });
-  }
-
-  function initAnalyticsChat(options) {
-    const root = document.getElementById(options.rootId);
-    if (!root) return null;
-
-    const messagesEl = root.querySelector(".chatMessages");
-    const inputEl = root.querySelector(".chatInput");
-    const sendBtn = root.querySelector(".chatSendBtn");
-    const quickButtons = root.querySelectorAll("button[data-q]");
-    const statusEl = root.querySelector(".chatStatus");
-
+    const openKey = `uxsdk.chatWidget.open.${options.storageKey || "default"}`;
     const state = {
+      isOpen: false,
       sessionId: `analytics_${Math.random().toString(16).slice(2, 10)}`,
       selectedExperimentKey: null,
-      selectedElement: null,
-      page: options.page,
     };
 
-    if (options.floatingStorageKey) {
-      setupFloatingWidget(root, options.floatingStorageKey);
+    function scrollToBottom() {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
-    function setBusy(busy, label) {
-      if (sendBtn) sendBtn.disabled = busy;
-      if (inputEl) inputEl.disabled = busy;
-      if (statusEl) statusEl.textContent = label || (busy ? "분석 중…" : "준비 완료");
+    function renderMessage(role, text) {
+      messagesEl.appendChild(createMessage(role, text));
+      scrollToBottom();
     }
 
-    function getContext() {
-      const extra = typeof options.getContext === "function" ? options.getContext() : {};
-      return {
-        page: state.page,
-        selectedExperimentKey: state.selectedExperimentKey,
-        selectedElement: state.selectedElement,
-        sessionId: state.sessionId,
-        ...extra,
-      };
+    function setOpen(nextOpen) {
+      state.isOpen = !!nextOpen;
+      panel.classList.toggle("is-hidden", !state.isOpen);
+      panel.setAttribute("aria-hidden", state.isOpen ? "false" : "true");
+      fab.setAttribute("aria-expanded", state.isOpen ? "true" : "false");
+      try {
+        localStorage.setItem(openKey, state.isOpen ? "1" : "0");
+      } catch {}
+      if (state.isOpen) {
+        setTimeout(() => inputEl.focus(), 120);
+      }
     }
 
-    async function send(content) {
-      const text = String(content || "").trim();
-      if (!text) return;
-      renderMessage(messagesEl, "user", text);
-      setBusy(true, "분석 중…");
+    function setBusy(busy) {
+      sendBtn.disabled = busy;
+      inputEl.disabled = busy;
+    }
 
-      const payload = {
-        agent: "analytics_copilot",
-        messages: [{ role: "user", content: text }],
-        context: getContext(),
-      };
+    function setSelectedExperimentKey(key) {
+      state.selectedExperimentKey = key || null;
+      if (!selectedExperimentEl) return;
+      selectedExperimentEl.textContent = state.selectedExperimentKey
+        ? `${state.selectedExperimentKey} 기준으로 응답 중`
+        : "실험을 선택하면 더 구체적으로 도와줄 수 있어요";
+    }
+
+    async function send(text) {
+      const content = String(text || "").trim();
+      if (!content) return;
+
+      renderMessage("user", content);
+      inputEl.value = "";
+      setBusy(true);
 
       try {
-        const res = await fetch("/api/chat", {
+        const response = await fetch("/api/chat", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            agent: "analytics_copilot",
+            messages: [{ role: "user", content }],
+            context: {
+              page: "dashboard",
+              selectedExperimentKey: state.selectedExperimentKey,
+              sessionId: state.sessionId,
+            },
+          }),
         });
-        const data = await res.json();
-        if (!data.ok) throw new Error(data.reason || "chat failed");
 
-        renderMessage(messagesEl, "assistant", data.answer || "(no answer)");
-        if (statusEl) statusEl.textContent = `응답 모드: ${data?.meta?.llmMode || "unknown"}`;
+        const data = await response.json();
+        if (!data?.ok) throw new Error(data?.reason || "chat failed");
+
+        renderMessage("assistant", data.answer || "응답이 비어 있어요.");
 
         const actions = Array.isArray(data.actions) ? data.actions : [];
-        const expAction = actions.find((a) => a.type === "experiment_draft");
-        if (expAction && typeof options.onExperimentDraft === "function") {
-          options.onExperimentDraft(expAction.draft);
+        const draftAction = actions.find((item) => item.type === "experiment_draft");
+        const changesAction = actions.find((item) => item.type === "editor_changes");
+        if (draftAction && typeof options.onExperimentDraft === "function") {
+          options.onExperimentDraft(draftAction.draft);
         }
-        const changesAction = actions.find((a) => a.type === "editor_changes");
         if (changesAction && typeof options.onEditorChanges === "function") {
-          options.onEditorChanges(changesAction.changesB || [], expAction?.draft || null);
+          options.onEditorChanges(changesAction.changesB || [], draftAction?.draft || null);
         }
-      } catch (err) {
-        renderMessage(messagesEl, "assistant", `오류: ${String(err)}`);
-        if (statusEl) statusEl.textContent = "오류가 발생했어요";
+      } catch (error) {
+        renderMessage("assistant", `오류: ${String(error)}`);
       } finally {
-        setBusy(false, statusEl?.textContent || "준비 완료");
+        setBusy(false);
       }
     }
 
-    sendBtn.addEventListener("click", () => {
-      send(inputEl.value);
-      inputEl.value = "";
-    });
-
-    inputEl.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
+    fab.addEventListener("click", () => setOpen(!state.isOpen));
+    if (closeBtn) closeBtn.addEventListener("click", () => setOpen(false));
+    sendBtn.addEventListener("click", () => send(inputEl.value));
+    inputEl.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
         send(inputEl.value);
-        inputEl.value = "";
       }
     });
-
-    for (const btn of quickButtons) {
+    quickButtons.forEach((btn) => {
       btn.addEventListener("click", () => send(btn.dataset.q || ""));
-    }
+    });
 
-    renderMessage(messagesEl, "assistant", "분석 코파일럿이 준비됐습니다. 빠른 액션 버튼이나 질문을 입력해 주세요.");
-    if (statusEl) statusEl.textContent = "준비 완료";
+    renderMessage("assistant", "안녕하세요. 현재 실험 성과를 해석하거나 다음 A/B 테스트 아이디어를 제안해드릴게요.");
+
+    try {
+      setOpen(localStorage.getItem(openKey) === "1");
+    } catch {
+      setOpen(false);
+    }
 
     return {
-      setSelectedExperimentKey(key) {
-        state.selectedExperimentKey = key || null;
+      setSelectedExperimentKey,
+      open() {
+        setOpen(true);
       },
-      setSelectedElement(element) {
-        state.selectedElement = element || null;
+      close() {
+        setOpen(false);
       },
       send,
     };
   }
 
-  global.AnalyticsChat = { init: initAnalyticsChat };
-})(window);
+  window.AnalyticsChatWidget = {
+    init: initAnalyticsChatWidget,
+  };
+})();
