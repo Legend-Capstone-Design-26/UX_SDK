@@ -627,6 +627,7 @@
     copilot = window.AnalyticsChat.init({
       rootId: "editorCopilotRoot",
       page: "editor",
+      floatingStorageKey: "editor-copilot",
       getContext() {
         return {
           page: "editor",

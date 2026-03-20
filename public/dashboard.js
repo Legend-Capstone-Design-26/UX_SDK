@@ -206,6 +206,7 @@
     state.copilot = window.AnalyticsChat.init({
       rootId: "analyticsCopilotRoot",
       page: "dashboard",
+      floatingStorageKey: "dashboard-copilot",
       getContext() {
         return {
           page: "dashboard",

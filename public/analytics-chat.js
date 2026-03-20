@@ -1,4 +1,8 @@
 (function (global) {
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+
   function createNode(tag, className, text) {
     const el = document.createElement(tag);
     if (className) el.className = className;
@@ -11,6 +15,96 @@
     item.textContent = text;
     listEl.appendChild(item);
     listEl.scrollTop = listEl.scrollHeight;
+  }
+
+  function setupFloatingWidget(root, storageKey) {
+    const card = root.closest(".floatingCopilot") || root;
+    const header = card.querySelector(".floatingCopilotHead");
+    if (!card || !header) return;
+
+    const persistKey = `uxsdk.floatingWidget.${storageKey || root.id || "copilot"}`;
+
+    function persist() {
+      const rect = card.getBoundingClientRect();
+      const payload = {
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      };
+      try {
+        localStorage.setItem(persistKey, JSON.stringify(payload));
+      } catch {}
+    }
+
+    function applySavedRect() {
+      try {
+        const raw = localStorage.getItem(persistKey);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        const width = Number(saved.width);
+        const height = Number(saved.height);
+        const left = Number(saved.left);
+        const top = Number(saved.top);
+        if (Number.isFinite(width)) card.style.width = `${width}px`;
+        if (Number.isFinite(height)) card.style.height = `${height}px`;
+        if (Number.isFinite(left) && Number.isFinite(top)) {
+          card.style.left = `${clamp(left, 8, Math.max(8, window.innerWidth - 160))}px`;
+          card.style.top = `${clamp(top, 8, Math.max(8, window.innerHeight - 80))}px`;
+          card.style.right = "auto";
+          card.style.bottom = "auto";
+        }
+      } catch {}
+    }
+
+    applySavedRect();
+
+    let dragState = null;
+
+    header.addEventListener("mousedown", (event) => {
+      if (event.target.closest("button, a, input, textarea, select, label")) return;
+      const rect = card.getBoundingClientRect();
+      dragState = {
+        offsetX: event.clientX - rect.left,
+        offsetY: event.clientY - rect.top,
+      };
+      card.classList.add("is-dragging");
+      event.preventDefault();
+    });
+
+    window.addEventListener("mousemove", (event) => {
+      if (!dragState) return;
+      const rect = card.getBoundingClientRect();
+      const nextLeft = clamp(event.clientX - dragState.offsetX, 8, Math.max(8, window.innerWidth - rect.width - 8));
+      const nextTop = clamp(event.clientY - dragState.offsetY, 8, Math.max(8, window.innerHeight - rect.height - 8));
+      card.style.left = `${nextLeft}px`;
+      card.style.top = `${nextTop}px`;
+      card.style.right = "auto";
+      card.style.bottom = "auto";
+    });
+
+    window.addEventListener("mouseup", () => {
+      if (!dragState) return;
+      dragState = null;
+      card.classList.remove("is-dragging");
+      persist();
+    });
+
+    if (typeof ResizeObserver === "function") {
+      const resizeObserver = new ResizeObserver(() => persist());
+      resizeObserver.observe(card);
+    }
+
+    window.addEventListener("resize", () => {
+      const rect = card.getBoundingClientRect();
+      const nextLeft = clamp(rect.left, 8, Math.max(8, window.innerWidth - rect.width - 8));
+      const nextTop = clamp(rect.top, 8, Math.max(8, window.innerHeight - rect.height - 8));
+      card.style.left = `${nextLeft}px`;
+      card.style.top = `${nextTop}px`;
+      card.style.right = "auto";
+      card.style.bottom = "auto";
+      persist();
+    });
   }
 
   function initAnalyticsChat(options) {
@@ -29,6 +123,10 @@
       selectedElement: null,
       page: options.page,
     };
+
+    if (options.floatingStorageKey) {
+      setupFloatingWidget(root, options.floatingStorageKey);
+    }
 
     function setBusy(busy, label) {
       if (sendBtn) sendBtn.disabled = busy;
