@@ -260,6 +260,45 @@
     </section>
   </main>
 
+  <div class="chatbotDock" aria-live="polite">
+    <button id="chatbotFab" class="chatbotFab" type="button" aria-expanded="false" aria-controls="analyticsChatPanel">
+      <span class="chatbotFabIcon">AI</span>
+      <span class="chatbotFabLabel">Analytics Copilot</span>
+    </button>
+
+    <section id="analyticsChatPanel" class="chatbotPanel is-hidden" aria-hidden="true">
+      <header class="chatbotHeader">
+        <div class="chatbotTitleWrap">
+          <div class="chatbotStatusDot" aria-hidden="true"></div>
+          <div>
+            <div class="chatbotTitle">Analytics Copilot</div>
+            <div class="chatbotSub" id="chatSelectedExperiment">실험을 선택하면 더 구체적으로 도와줄 수 있어요</div>
+          </div>
+        </div>
+        <div class="chatbotHeaderActions">
+          <button id="chatbotCloseBtn" class="chatbotIconBtn" type="button" aria-label="챗봇 닫기">닫기</button>
+        </div>
+      </header>
+
+      <div class="chatbotQuickActions">
+        <button class="chatbotQuickBtn" type="button" data-q="현재 실험 요약해줘">실험 요약</button>
+        <button class="chatbotQuickBtn" type="button" data-q="A/B 차이를 설명해줘">A/B 차이</button>
+        <button class="chatbotQuickBtn" type="button" data-q="다음 실험안을 만들어줘">다음 실험안</button>
+      </div>
+
+      <div id="chatMessages" class="chatbotMessages"></div>
+
+      <footer class="chatbotComposer">
+        <label class="chatbotInputWrap" for="chatInput">
+          <span class="chatbotInputLabel">메시지 입력</span>
+          <textarea id="chatInput" class="chatbotInput" rows="3" placeholder="예: checkout 실험의 문제점과 다음 실험 아이디어를 알려줘"></textarea>
+        </label>
+        <button id="chatSendBtn" class="chatbotSendBtn" type="button">보내기</button>
+      </footer>
+    </section>
+  </div>
+
+  <script src="/analytics-chat.js"></script>
   <script src="/dashboard.js"></script>
 </body>
 </html>

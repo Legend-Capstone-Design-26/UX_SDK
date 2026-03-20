@@ -28,6 +28,9 @@
   const insightsList = document.getElementById("insightsList");
   const helpButtons = Array.from(document.querySelectorAll(".helpBtn"));
 
+  let selectedExperimentKey = null;
+  let chatWidget = null;
+
   function fmtPct(x) {
     if (typeof x !== "number" || !isFinite(x)) return "—";
     return (x * 100).toFixed(2) + "%";
@@ -267,6 +270,8 @@
   async function showMetrics(key) {
     metricsCard.style.display = "block";
     metricKeyEl.textContent = key;
+    selectedExperimentKey = key;
+    chatWidget?.setSelectedExperimentKey(key);
 
     // loading
     cvrA.textContent = cvrB.textContent = "…";
@@ -335,6 +340,11 @@ events=${m.totals.events}  goals=${(m.goals||[]).join(", ")}`;
       fetchInsights()
     ]);
 
+    if (!selectedExperimentKey && exps.length > 0) {
+      selectedExperimentKey = exps[0].key || null;
+      chatWidget?.setSelectedExperimentKey(selectedExperimentKey);
+    }
+
     expTbody.innerHTML = exps.length ? exps.map(rowHtml).join("") : `
       <tr><td colspan="6" class="muted">실험이 없습니다. /editor에서 Real 적용을 눌러 생성하세요.</td></tr>
     `;
@@ -386,6 +396,19 @@ events=${m.totals.events}  goals=${(m.goals||[]).join(", ")}`;
   });
 
   refreshBtn.addEventListener("click", () => render());
+
+  if (window.AnalyticsChatWidget) {
+    chatWidget = window.AnalyticsChatWidget.init({
+      fabId: "chatbotFab",
+      panelId: "analyticsChatPanel",
+      closeBtnId: "chatbotCloseBtn",
+      messagesId: "chatMessages",
+      inputId: "chatInput",
+      sendBtnId: "chatSendBtn",
+      selectedExperimentId: "chatSelectedExperiment",
+      storageKey: "dashboard",
+    });
+  }
 
   render().catch((e) => alert(String(e)));
 })();
