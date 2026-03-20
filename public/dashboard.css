@@ -141,6 +141,37 @@ tr:hover td{background:rgba(255,255,255,0.02);}
 .compactList li+li{margin-top:4px;}
 
 .copilotCard{display:flex; flex-direction:column; gap:12px;}
+.floatingCopilotShell{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  z-index:40;
+  width:min(420px, calc(100vw - 24px));
+}
+.floatingCopilot{
+  box-shadow:0 24px 60px rgba(0,0,0,0.38);
+  border:1px solid rgba(106,169,255,0.18);
+  background:linear-gradient(180deg, rgba(23,26,33,0.98), rgba(17,20,28,0.98));
+}
+.floatingCopilotHead{display:flex; align-items:flex-start; justify-content:space-between; gap:12px;}
+.floatingCopilotTitle{font-weight:900; font-size:15px;}
+.floatingCopilotHeadBtns{display:flex; align-items:center; gap:8px;}
+.iconBtn{
+  cursor:pointer;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,0.04);
+  color:var(--text);
+  border-radius:999px;
+  padding:7px 12px;
+  font-weight:900;
+}
+.iconBtn:hover{border-color:#3c4453;}
+.floatingCopilot.is-collapsed .chatMetaRow,
+.floatingCopilot.is-collapsed .quickPillRow,
+.floatingCopilot.is-collapsed .chatMessages,
+.floatingCopilot.is-collapsed .chatComposer{display:none;}
+.floatingCopilot.is-collapsed{gap:0;}
+.floatingCopilot.is-collapsed .floatingCopilotHead{margin:0;}
 .chatMetaRow{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;}
 .quickPillRow{display:flex; gap:8px; flex-wrap:wrap;}
 .chatMessages{
@@ -189,4 +220,5 @@ tr:hover td{background:rgba(255,255,255,0.02);}
   .helpPopover{left:auto; right:0;}
   .helpPopover::before{left:auto; right:16px;}
   .chatComposer{grid-template-columns:1fr;}
+  .floatingCopilotShell{right:12px; left:12px; bottom:12px; width:auto;}
 }

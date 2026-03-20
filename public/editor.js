@@ -70,6 +70,8 @@
   const editorCopilotExpKey = document.getElementById("editorCopilotExpKey");
   const editorImportedState = document.getElementById("editorImportedState");
   const applyImportedDraftBtn = document.getElementById("applyImportedDraftBtn");
+  const editorCopilotRoot = document.getElementById("editorCopilotRoot");
+  const editorCopilotToggleBtn = document.getElementById("editorCopilotToggleBtn");
 
   const DRAFT_STORAGE_KEY = "uxsdk.analyticsCopilotDraft";
 
@@ -673,6 +675,12 @@
     }
   }
 
+  function setEditorCopilotCollapsed(collapsed) {
+    editorCopilotRoot.classList.toggle("is-collapsed", collapsed);
+    editorCopilotToggleBtn.textContent = collapsed ? "열기" : "접기";
+    editorCopilotToggleBtn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  }
+
   async function realApplyToServer() {
     const expKey = (expKeyInput.value || "").trim() || getDefaultExpKey();
     const urlPrefix = (urlPrefixInput.value || "").trim() || getDefaultUrlPrefix();
@@ -849,6 +857,9 @@
     if (!latestImportedDraft) return;
     applyDraftPayload(latestImportedDraft, { keepStorage: true });
   });
+  editorCopilotToggleBtn.addEventListener("click", () => {
+    setEditorCopilotCollapsed(!editorCopilotRoot.classList.contains("is-collapsed"));
+  });
 
   // iframe load hook
   frame.addEventListener("load", () => {
@@ -894,6 +905,7 @@
 
   renderChangesList();
   initCopilot();
+  setEditorCopilotCollapsed(true);
   setComposerMode("text");
   setPickMode(true);
   setVariant("A");

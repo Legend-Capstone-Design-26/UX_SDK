@@ -31,6 +31,8 @@
   const copilotDraftStatus = document.getElementById("copilotDraftStatus");
   const saveDraftBtn = document.getElementById("saveDraftBtn");
   const openDraftInEditorBtn = document.getElementById("openDraftInEditorBtn");
+  const dashboardCopilotRoot = document.getElementById("analyticsCopilotRoot");
+  const dashboardCopilotToggleBtn = document.getElementById("dashboardCopilotToggleBtn");
 
   const DRAFT_STORAGE_KEY = "uxsdk.analyticsCopilotDraft";
   const state = {
@@ -155,6 +157,12 @@
     if (state.copilot) {
       state.copilot.setSelectedExperimentKey(state.selectedExperimentKey);
     }
+  }
+
+  function setCopilotCollapsed(collapsed) {
+    dashboardCopilotRoot.classList.toggle("is-collapsed", collapsed);
+    dashboardCopilotToggleBtn.textContent = collapsed ? "열기" : "접기";
+    dashboardCopilotToggleBtn.setAttribute("aria-expanded", collapsed ? "false" : "true");
   }
 
   function stageDraftForEditor(draft, changes) {
@@ -518,6 +526,9 @@ events=${m.totals.events}  goals=${(m.goals||[]).join(", ")}`;
   });
 
   refreshBtn.addEventListener("click", () => render());
+  dashboardCopilotToggleBtn.addEventListener("click", () => {
+    setCopilotCollapsed(!dashboardCopilotRoot.classList.contains("is-collapsed"));
+  });
   saveDraftBtn.addEventListener("click", async () => {
     try {
       saveDraftBtn.disabled = true;
@@ -534,6 +545,7 @@ events=${m.totals.events}  goals=${(m.goals||[]).join(", ")}`;
   });
 
   initCopilot();
+  setCopilotCollapsed(true);
 
   render().catch((e) => alert(String(e)));
 })();

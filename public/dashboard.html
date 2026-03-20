@@ -46,13 +46,18 @@
       </div>
     </section>
 
-    <section class="card">
-      <div class="cardHead">
-        <h2>Analytics Copilot</h2>
-        <div class="muted">실험 해석 -> Variant B 초안 생성 -> 에디터로 넘기기</div>
-      </div>
+    <section class="floatingCopilotShell" id="dashboardCopilotShell">
+      <div id="analyticsCopilotRoot" class="copilotCard floatingCopilot is-collapsed">
+        <div class="floatingCopilotHead">
+          <div>
+            <div class="floatingCopilotTitle">Analytics Copilot</div>
+            <div class="muted">실험 해석 -> Variant B 초안 생성 -> 에디터로 넘기기</div>
+          </div>
+          <div class="floatingCopilotHeadBtns">
+            <button class="iconBtn" type="button" id="dashboardCopilotToggleBtn" aria-expanded="false">열기</button>
+          </div>
+        </div>
 
-      <div id="analyticsCopilotRoot" class="copilotCard">
         <div class="chatMetaRow">
           <div class="muted">선택된 실험: <span class="mono" id="copilotExperimentKey">아직 선택 안 됨</span></div>
           <div class="muted" id="copilotDraftStatus">초안 없음</div>
@@ -71,11 +76,12 @@
           <button class="btn primary chatSendBtn" type="button">보내기</button>
         </div>
 
-        <div class="chatMetaRow">
-          <div class="muted chatStatus">준비 중…</div>
-          <div class="btnRow compactBtns">
-            <button class="btn" type="button" id="saveDraftBtn" disabled>draft 저장</button>
-            <button class="btn" type="button" id="openDraftInEditorBtn" disabled>초안을 에디터에서 열기</button>
+          <div class="chatMetaRow">
+            <div class="muted chatStatus">준비 중…</div>
+            <div class="btnRow compactBtns">
+              <button class="btn" type="button" id="saveDraftBtn" disabled>draft 저장</button>
+              <button class="btn" type="button" id="openDraftInEditorBtn" disabled>초안을 에디터에서 열기</button>
+            </div>
           </div>
         </div>
       </div>

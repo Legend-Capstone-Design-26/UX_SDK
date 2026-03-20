@@ -39,9 +39,18 @@
 
   <main class="layout">
     <section class="panel">
-      <h2>Analytics Copilot</h2>
-      <div class="card">
-        <div id="editorCopilotRoot" class="copilotCard">
+      <section class="floatingCopilotShell editorFloatingShell" id="editorCopilotShell">
+        <div id="editorCopilotRoot" class="copilotCard floatingCopilot is-collapsed">
+          <div class="floatingCopilotHead">
+            <div>
+              <div class="floatingCopilotTitle">Analytics Copilot</div>
+              <div class="muted">선택 요소/현재 변경 기준 제안</div>
+            </div>
+            <div class="floatingCopilotHeadBtns">
+              <button class="iconBtn" type="button" id="editorCopilotToggleBtn" aria-expanded="false">열기</button>
+            </div>
+          </div>
+
           <div class="chatMetaRow">
             <div class="muted">현재 실험: <span class="mono" id="editorCopilotExpKey">자동 선택</span></div>
             <div class="muted" id="editorImportedState">아직 가져온 초안 없음</div>
@@ -65,7 +74,8 @@
             <button class="btn" type="button" id="applyImportedDraftBtn" disabled>가져온 초안 다시 적용</button>
           </div>
         </div>
-      </div>
+        </div>
+      </section>
 
       <h2>현재 선택</h2>
       <div class="card">
