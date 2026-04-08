@@ -20,6 +20,8 @@ function getInfraConfig() {
         .filter(Boolean),
       clientId: String(process.env.KAFKA_CLIENT_ID || "ux-sdk-service"),
       topicEvents: String(process.env.KAFKA_TOPIC_EVENTS || "ux.events.raw"),
+      consumerGroupId: String(process.env.KAFKA_CONSUMER_GROUP_ID || "ux-sdk-event-consumer"),
+      fromBeginning: parseBoolean(process.env.KAFKA_CONSUMER_FROM_BEGINNING, false),
     },
     redis: {
       enabled: parseBoolean(process.env.ENABLE_REDIS_SESSION_STORE, false),
