@@ -8,12 +8,17 @@
   ],
   "scripts": {
     "dev": "node server.js",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "infra:logs": "docker compose logs -f kafka redis",
     "test": "node --test",
     "simulate": "node scripts/simulate.js",
     "load:k6": "k6 run load/persona-load.js",
     "sdk:pack": "npm pack ./packages/browser-sdk"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "ioredis": "^5.4.1",
+    "kafkajs": "^2.2.4"
   }
 }
