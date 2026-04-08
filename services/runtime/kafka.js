@@ -2,15 +2,15 @@ const { Kafka, logLevel } = require("kafkajs");
 
 function createKafkaRuntime({ brokers, clientId }) {
   let producerPromise = null;
+  const kafka = new Kafka({
+    clientId,
+    brokers,
+    logLevel: logLevel.NOTHING,
+  });
 
   async function getProducer() {
     if (!producerPromise) {
       producerPromise = (async () => {
-        const kafka = new Kafka({
-          clientId,
-          brokers,
-          logLevel: logLevel.NOTHING,
-        });
         const producer = kafka.producer();
         await producer.connect();
         return producer;
@@ -30,6 +30,18 @@ function createKafkaRuntime({ brokers, clientId }) {
     return { sent: list.length };
   }
 
+  async function createConsumer({ groupId, topics, fromBeginning = false, eachMessage }) {
+    const consumer = kafka.consumer({ groupId });
+    await consumer.connect();
+
+    for (const topic of topics || []) {
+      await consumer.subscribe({ topic, fromBeginning });
+    }
+
+    await consumer.run({ eachMessage });
+    return consumer;
+  }
+
   async function disconnect() {
     if (!producerPromise) return;
     const producer = await producerPromise;
@@ -39,6 +51,7 @@ function createKafkaRuntime({ brokers, clientId }) {
 
   return {
     publishBatch,
+    createConsumer,
     disconnect,
   };
 }
