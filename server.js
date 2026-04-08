@@ -6,10 +6,17 @@ const crypto = require("crypto");
 const { ensureJsonFile, ensureJsonlFile } = require("./services/data-store");
 const { createChatRoutes } = require("./routes/chat-routes");
 const { loadEnvFromFile } = require("./services/llm/config");
-const { createFileEventStore } = require("./services/stores/event-store");
+const {
+  createFileEventStore,
+  createCompositeEventStore,
+  createKafkaEventStore,
+} = require("./services/stores/event-store");
 const { createFileExperimentStore } = require("./services/stores/experiment-store");
 const { createFileSiteRegistryStore } = require("./services/stores/site-registry-store");
 const { createMetricsReadModel } = require("./services/read-models/metrics-read-model");
+const { getInfraConfig } = require("./services/runtime/infra-config");
+const { createKafkaRuntime } = require("./services/runtime/kafka");
+const { createRedisRuntime } = require("./services/runtime/redis");
 
 const {
   computeLabeledSessionSummaries,
@@ -24,6 +31,7 @@ const {
 } = require("./services/analytics/experiment-status");
 
 loadEnvFromFile();
+const infraConfig = getInfraConfig();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -233,10 +241,24 @@ function safeAbsoluteUrl(baseUrl, value) {
     return new URL("/", baseUrl).toString();
   }
 }
-const eventStore = createFileEventStore({ eventsFile: EVENTS_FILE });
+const fileEventStore = createFileEventStore({ eventsFile: EVENTS_FILE });
 const experimentStore = createFileExperimentStore({ experimentsFile: EXP_FILE });
 const siteRegistryStore = createFileSiteRegistryStore({ sitesFile: SITES_FILE });
-const metricsReadModel = createMetricsReadModel({ eventStore, experimentStore });
+const metricsReadModel = createMetricsReadModel({ eventStore: fileEventStore, experimentStore });
+
+const kafkaRuntime = infraConfig.kafka.enabled
+  ? createKafkaRuntime({ brokers: infraConfig.kafka.brokers, clientId: infraConfig.kafka.clientId })
+  : null;
+const redisRuntime = infraConfig.redis.enabled
+  ? createRedisRuntime({ url: infraConfig.redis.url, keyPrefix: infraConfig.redis.keyPrefix })
+  : null;
+const eventStore = kafkaRuntime
+  ? createCompositeEventStore({
+      primaryStore: fileEventStore,
+      secondaryStores: [createKafkaEventStore({ kafkaRuntime, topic: infraConfig.kafka.topicEvents })],
+      logger: (...args) => console.warn("[infra]", ...args),
+    })
+  : fileEventStore;
 function slugify(value) {
   return String(value || "")
     .toLowerCase()
@@ -617,15 +639,18 @@ function toInt(x) {
 }
 
 // ---------- collect endpoint ----------
-app.post("/collect", (req, res) => {
+app.post("/collect", async (req, res) => {
   const payload = req.body;
   const events = Array.isArray(payload?.events) ? payload.events : [];
   if (events.length === 0) return res.status(400).json({ ok: false, reason: "no events" });
 
-  eventStore.appendBatch(events, { received_at: Date.now(), request_id: rid() });
-  console.log("✅ collect:", events[events.length - 1]?.event_name, "count=", events.length);
-
-  return res.json({ ok: true, received: events.length });
+  try {
+    await eventStore.appendBatch(events, { received_at: Date.now(), request_id: rid() });
+    console.log("✅ collect:", events[events.length - 1]?.event_name, "count=", events.length);
+    return res.json({ ok: true, received: events.length });
+  } catch (error) {
+    return res.status(500).json({ ok: false, reason: `collect failed: ${String(error)}` });
+  }
 });
 
 app.get("/api/sites", async (req, res) => {
@@ -976,8 +1001,27 @@ app.listen(PORT, () => {
   console.log(`✅ AB Sample running: http://localhost:${PORT}`);
   console.log(`📦 collecting events to: ${EVENTS_FILE}`);
   console.log(`🧪 experiments file: ${EXP_FILE}`);
+  console.log(`🛰️  kafka dual write: ${infraConfig.kafka.enabled ? `enabled -> ${infraConfig.kafka.topicEvents}` : "disabled"}`);
+  console.log(`🧠 redis session store: ${infraConfig.redis.enabled ? "enabled" : "disabled"}`);
   console.log(`📊 dashboard: http://localhost:${PORT}/dashboard`);
   console.log(`🧩 sessions api: http://localhost:${PORT}/api/sessions`);
   console.log(`🏷️  labels summary: http://localhost:${PORT}/api/labels/summary`);
   console.log(`💡 insights: http://localhost:${PORT}/api/insights`);
+});
+
+async function shutdownInfra() {
+  await Promise.allSettled([
+    kafkaRuntime?.disconnect?.(),
+    redisRuntime?.disconnect?.(),
+  ]);
+}
+
+process.on("SIGINT", async () => {
+  await shutdownInfra();
+  process.exit(0);
+});
+
+process.on("SIGTERM", async () => {
+  await shutdownInfra();
+  process.exit(0);
 });
