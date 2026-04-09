@@ -17,6 +17,8 @@ const { createMetricsReadModel } = require("./services/read-models/metrics-read-
 const { getInfraConfig } = require("./services/runtime/infra-config");
 const { createKafkaRuntime } = require("./services/runtime/kafka");
 const { createRedisRuntime } = require("./services/runtime/redis");
+const { createRedisSessionStore } = require("./services/stores/redis-session-store");
+const { createRedisMetricsStore } = require("./services/stores/redis-metrics-store");
 
 const {
   computeLabeledSessionSummaries,
@@ -252,6 +254,14 @@ const kafkaRuntime = infraConfig.kafka.enabled
 const redisRuntime = infraConfig.redis.enabled
   ? createRedisRuntime({ url: infraConfig.redis.url, keyPrefix: infraConfig.redis.keyPrefix })
   : null;
+const redisSessionStore = redisRuntime
+  ? createRedisSessionStore({
+      redisRuntime,
+      sessionTtlSec: infraConfig.redis.sessionTtlSec,
+      assignmentTtlSec: infraConfig.redis.assignmentTtlSec,
+    })
+  : null;
+const redisMetricsStore = redisRuntime ? createRedisMetricsStore({ redisRuntime }) : null;
 const eventStore = kafkaRuntime
   ? createCompositeEventStore({
       primaryStore: fileEventStore,
@@ -879,15 +889,49 @@ app.get("/api/config", (req, res) => {
  *
  * MVP: events.jsonl 전체를 읽어서 집계(데이터 커지면 스트리밍/DB로 이동 권장)
  */
-app.get("/api/metrics", (req, res) => {
+app.get("/api/metrics", async (req, res) => {
   const site_id = req.query.site_id || "ab-sample";
   const key = String(req.query.key || "");
   if (!key) return res.status(400).json({ ok: false, reason: "missing key" });
+
+  const experiment = experimentStore.getByKey(site_id, key);
+  if (!experiment) {
+    return res.status(404).json({ ok: false, reason: "experiment not found" });
+  }
+
+  if (redisMetricsStore) {
+    const realtime = await redisMetricsStore.getExperimentMetrics({
+      siteId: site_id,
+      key,
+      goals: experiment.goals,
+      experiment,
+    });
+    if (realtime?.ok) {
+      return res.json(realtime);
+    }
+  }
+
   const out = metricsReadModel.getExperimentMetrics({ siteId: site_id, key });
   if (!out.ok && out.reason === "experiment not found") {
     return res.status(404).json(out);
   }
   return res.json(out);
+});
+
+app.get("/api/realtime/sessions", async (req, res) => {
+  if (!redisSessionStore) {
+    return res.status(503).json({ ok: false, reason: "redis realtime session store disabled" });
+  }
+
+  const site_id = String(req.query.site_id || "ab-sample");
+  const limit = Math.max(1, Math.min(200, toInt(req.query.limit) ?? 50));
+
+  try {
+    const sessions = await redisSessionStore.listSessionStates({ siteId: site_id, limit });
+    return res.json({ ok: true, site_id, source: "redis", sessions });
+  } catch (error) {
+    return res.status(500).json({ ok: false, reason: String(error) });
+  }
 });
 
 // ---------- Sessions / Labels / Insights (UX-Stream v1) ----------
@@ -1005,6 +1049,7 @@ app.listen(PORT, () => {
   console.log(`🧠 redis session store: ${infraConfig.redis.enabled ? "enabled" : "disabled"}`);
   console.log(`📊 dashboard: http://localhost:${PORT}/dashboard`);
   console.log(`🧩 sessions api: http://localhost:${PORT}/api/sessions`);
+  console.log(`⚡ realtime sessions: http://localhost:${PORT}/api/realtime/sessions`);
   console.log(`🏷️  labels summary: http://localhost:${PORT}/api/labels/summary`);
   console.log(`💡 insights: http://localhost:${PORT}/api/insights`);
 });
