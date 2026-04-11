@@ -1,5 +1,5 @@
 {
-  "name": "ux-sdk-dashboard-service",
+  "name": "ux-sdk-package-workspace",
   "version": "1.0.0",
   "private": true,
   "type": "commonjs",
@@ -7,19 +7,6 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "node server.js",
-    "worker:events": "node workers/event-consumer.js",
-    "infra:up": "docker compose up -d",
-    "infra:down": "docker compose down",
-    "infra:logs": "docker compose logs -f kafka redis",
-    "test": "node --test",
-    "simulate": "node scripts/simulate.js",
-    "load:k6": "k6 run load/persona-load.js",
     "sdk:pack": "npm pack ./packages/browser-sdk"
-  },
-  "dependencies": {
-    "express": "^4.19.2",
-    "ioredis": "^5.4.1",
-    "kafkajs": "^2.2.4"
   }
 }

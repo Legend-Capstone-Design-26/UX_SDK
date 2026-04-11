@@ -1,7 +1,15 @@
 {
-  "name": "@legend/ux-sdk",
-  "version": "0.1.0",
+  "name": "@enejwl/ux-sdk",
+  "version": "0.1.1",
   "description": "Installable browser SDK for Legend UX analytics and experiments",
+  "keywords": [
+    "analytics",
+    "ab-testing",
+    "experimentation",
+    "browser-sdk",
+    "ux",
+    "tracking"
+  ],
   "type": "commonjs",
   "main": "./src/sdk.js",
   "exports": {
@@ -15,5 +23,15 @@
     "src",
     "README.md"
   ],
+  "homepage": "https://github.com/Legend-Capstone-Design-26/UX_SDK#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Legend-Capstone-Design-26/UX_SDK.git",
+    "directory": "packages/browser-sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/Legend-Capstone-Design-26/UX_SDK/issues"
+  },
+  "author": "Legend Capstone Design 26",
   "license": "MIT"
 }

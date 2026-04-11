@@ -1,8 +1,17 @@
-events.json
 node_modules/
-data/events.jsonl
-load/k6-summary.json
+
+# package artifacts
+*.tgz
+
+# local env
 .env
 .env.*
 !.env.example
+
+# logs
 *.log
+npm-debug.log*
+
+# generated outputs
+events.json
+load/k6-summary.json
